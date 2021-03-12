@@ -49,13 +49,11 @@ model = BertForTokenClassification.from_pretrained(output_dir)
 # tokenizer = BertTokenizer.from_pretrained(output_dir)
 
 # Copy the model to the GPU.
-model.to(device)
+# model.to(device)
+
+
 
 model.eval()
-
-if torch.cuda.is_available():
-    model.cuda()
-
 
 
 # Create the DataLoaders for our training and validation sets.
@@ -122,13 +120,21 @@ scheduler = get_linear_schedule_with_warmup(optimizer,
 def flat_accuracy(preds, labels):
     pred_flat = np.argmax(preds, axis=2).flatten()
     labels_flat = labels.flatten()
-    return np.sum(pred_flat == labels_flat) / len(labels_flat)
+
+    # print("-")
+    # print(list(pred_flat))
+    # print(list(labels_flat))
+    # print("-")
+
+    score = np.sum(pred_flat == labels_flat) / len(labels_flat)
+    return score
 
 
 def intent_accuracy(preds, labels):
     pred_flat = np.argmax(preds, axis=2)[:,0].flatten()
     labels_flat = labels[:,0].flatten()
-    return np.sum(pred_flat == labels_flat) / len(labels_flat)
+    score = np.sum(pred_flat == labels_flat) / len(labels_flat)
+    return score
 
 
 def format_time(elapsed):

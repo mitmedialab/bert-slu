@@ -1,30 +1,20 @@
-import random
 import torch
 from transformers import BertTokenizer
 from torch.utils.data import TensorDataset, random_split
-import config
 import json
 import pickle
-from os import path
 from params import params
 
 # Load the BERT tokenizer.
-# print('Loading BERT tokenizer...')
+print('Loading BERT tokenizer...')
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
 
 
-# train_path = "/Users/matthew/Development/6.867-project/data/records/atis-eval20/train.pkl"
-# val_path = "/Users/matthew/Development/6.867-project/data/records/atis-eval20/eval.pkl"
-# test_path = "/Users/matthew/Development/6.867-project/data/records/atis-eval20/test.pkl"
-# meta_path = "/Users/matthew/Development/6.867-project/data/records/atis-eval20/metadata.json"
-# atis = True
-train_path = params.train_path
-val_path = params.val_path
-test_path = params.test_path
-meta_path = params.meta_path
+train_path = params.data_path + "train.pkl"
+val_path = params.data_path + "eval.pkl"
+test_path = params.data_path + "test.pkl"
+meta_path = params.data_path + "metadata.json"
 atis = params.atis
-
-
 
 
 with open(meta_path, "r") as f:
@@ -59,7 +49,10 @@ for example in train_data:
     else:
         train_sentences.append(" ".join(example['tokens_text']))
         num_tokens = len(example['tokens_text'])
-    train_labels.append(list([example['intent'][0]+1])+list([s+intent_dim+1 if i < num_tokens else 0 for i, s in enumerate(example['slots'])]))
+    if params.slots:
+        train_labels.append(list([example['intent'][0]+1])+list([s+intent_dim+1 if i < num_tokens else 0 for i, s in enumerate(example['slots'])]))
+    else:
+        train_labels.append(list([example['intent'][0]]))
 
 
 with open(val_path, 'rb') as f:
@@ -73,7 +66,10 @@ for example in val_data:
     else:
         val_sentences.append(" ".join(example['tokens_text']))
         num_tokens = len(example['tokens_text'])
-    val_labels.append(list([example['intent'][0]+1])+list([s+intent_dim+1 if i < num_tokens else 0 for i, s in enumerate(example['slots'])]))
+    if params.slots:
+        val_labels.append(list([example['intent'][0]+1])+list([s+intent_dim+1 if i < num_tokens else 0 for i, s in enumerate(example['slots'])]))
+    else:
+        val_labels.append(list([example['intent'][0]]))
 
 
 with open(test_path, 'rb') as f:
@@ -87,16 +83,11 @@ for example in test_data:
     else:
         test_sentences.append(" ".join(example['tokens_text']))
         num_tokens = len(example['tokens_text'])
-    test_labels.append(list([example['intent'][0]+1])+list([s+intent_dim+1 if i < num_tokens else 0 for i, s in enumerate(example['slots'])]))
+    if params.slots:
+        test_labels.append(list([example['intent'][0]+1])+list([s+intent_dim+1 if i < num_tokens else 0 for i, s in enumerate(example['slots'])]))
+    else:
+        test_labels.append(list([example['intent'][0]]))
 
-
-# Report the number of sentences.
-# print('Number of training sentences: {}\n'.format(len(train_sentences)))
-# print('Number of validation sentences: {}\n'.format(len(val_sentences)))
-# print('Number of test sentences: {}\n'.format(len(test_sentences)))
-#
-# sentences = df.sentence.values
-# labels = df.label.values
 
 # Tokenize all of the sentences and map the tokens to thier word IDs.
 train_input_ids = []
@@ -192,15 +183,15 @@ for sent in test_sentences:
 train_input_ids = torch.cat(train_input_ids, dim=0)
 val_input_ids = torch.cat(val_input_ids, dim=0)
 test_input_ids = torch.cat(test_input_ids, dim=0)
+
 train_attention_masks = torch.cat(train_attention_masks, dim=0)
 val_attention_masks = torch.cat(val_attention_masks, dim=0)
 test_attention_masks = torch.cat(test_attention_masks, dim=0)
+
 train_segment_ids = torch.cat(train_segment_ids, dim=0)
 val_segment_ids = torch.cat(val_segment_ids, dim=0)
 test_segment_ids = torch.cat(test_segment_ids, dim=0)
-# train_labels = torch.tensor(train_labels)
-# val_labels = torch.tensor(val_labels)
-# test_labels = torch.tensor(test_labels)
+
 train_labels = torch.cat([torch.LongTensor([l]) for l in train_labels], dim=0)
 val_labels = torch.cat([torch.LongTensor([l]) for l in val_labels], dim=0)
 test_labels = torch.cat([torch.LongTensor([l]) for l in test_labels], dim=0)
@@ -211,16 +202,3 @@ test_labels = torch.cat([torch.LongTensor([l]) for l in test_labels], dim=0)
 train_dataset = TensorDataset(train_input_ids, train_attention_masks, train_segment_ids, train_labels)
 val_dataset = TensorDataset(val_input_ids, val_attention_masks, val_segment_ids, val_labels)
 test_dataset = TensorDataset(test_input_ids, test_attention_masks, test_segment_ids, test_labels)
-
-# Create a 90-10 train-validation split.
-
-# # Calculate the number of samples to include in each set.
-# train_size = int(0.9 * len(dataset))
-# val_size = len(dataset) - train_size
-#
-# # Divide the dataset by randomly selecting samples.
-# train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
-
-# print('{:>5,} training samples'.format(len(train_dataset)))
-# print('{:>5,} validation samples'.format(len(val_dataset)))
-# print('{:>5,} test samples'.format(len(test_dataset)))
