@@ -31,20 +31,9 @@ else:
     device = torch.device("cpu")
 
 
-
-# The DataLoader needs to know our batch size for training, so we specify it
-# here. For fine-tuning BERT on a specific task, the authors recommend a batch
-# size of 16 or 32.
-# batch_size = 32
-# epochs = 1
-# output_dir = './model_save/'
-
 batch_size = params.batch_size
 epochs = params.epochs
 output_dir = params.output_dir
-
-
-
 
 
 # Create the DataLoaders for our training and validation sets.
@@ -81,6 +70,7 @@ model = BertForSequenceClassification.from_pretrained(
     output_attentions = False, # Whether the model returns attentions weights.
     output_hidden_states = False, # Whether the model returns all hidden-states.
 )
+
 
 # Tell pytorch to run this model on the GPU.
 if torch.cuda.is_available():
@@ -231,8 +221,8 @@ for epoch_i in range(0, epochs):
         # the loss (because we provided labels) and the "logits"--the model
         # outputs prior to activation.
         loss, logits = model(b_input_ids,
-                             token_type_ids=None,
                              attention_mask=b_input_mask,
+                             token_type_ids=None,
                              labels=b_labels)
 
         # Accumulate the training loss over all of the batches so that we can
@@ -392,6 +382,3 @@ print("Saving model to %s" % output_dir)
 model_to_save = model.module if hasattr(model, 'module') else model  # Take care of distributed/parallel training
 model_to_save.save_pretrained(output_dir)
 tokenizer.save_pretrained(output_dir)
-
-# Good practice: save your training arguments together with the trained model
-# torch.save(args, os.path.join(output_dir, 'training_args.bin'))

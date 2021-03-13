@@ -9,9 +9,15 @@ Matthew Huggins, Sharifa Alghowinem, Sooyeon Jeong, Pedro Colon-Hernandez, Cynth
 
 ## Setup
 Requires Python 3
-pip install -r requirements.txt
+
+`pip install -r requirements.txt`
 
 ## Getting Started
 
-python main-eval.py --data_path "./snips/"  --epochs 1 --batch_size 32 --output_dir "./model_save_snips_1ep/"
-python eval.py --data_path "./snips/" --epochs 1 --batch_size 32  --output_dir "./model_save_snips_1ep/"
+Train a model:
+
+`python train.py --data_path "./snips/"  --epochs 1 --batch_size 32 --output_dir "./model_save_snips_1ep/"`
+
+Evaluate on test:
+
+`python eval.py --data_path "./snips/" --output_dir "./model_save_snips_1ep/"`

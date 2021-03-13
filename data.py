@@ -6,7 +6,7 @@ import pickle
 from params import params
 
 # Load the BERT tokenizer.
-print('Loading BERT tokenizer...')
+# print('Loading BERT tokenizer...')
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
 
 

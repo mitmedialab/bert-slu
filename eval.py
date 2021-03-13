@@ -8,7 +8,7 @@ import torch
 from transformers import BertTokenizer
 from torch.utils.data import TensorDataset, random_split
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
-from transformers import BertForTokenClassification, AdamW, BertConfig
+from transformers import BertForSequenceClassification, AdamW, BertConfig
 from transformers import get_linear_schedule_with_warmup
 import numpy as np
 from data import train_dataset, val_dataset, tokenizer, test_dataset, intent_dim, slots_dim, tag_values
@@ -45,7 +45,7 @@ epochs = params.epochs
 output_dir = params.output_dir
 
 # Load a trained model and vocabulary that you have fine-tuned
-model = BertForTokenClassification.from_pretrained(output_dir)
+model = BertForSequenceClassification.from_pretrained(output_dir)
 # tokenizer = BertTokenizer.from_pretrained(output_dir)
 
 # Copy the model to the GPU.
@@ -116,25 +116,12 @@ scheduler = get_linear_schedule_with_warmup(optimizer,
                                             num_training_steps = total_steps)
 
 
-# Function to calculate the accuracy of our predictions vs labels
-def flat_accuracy(preds, labels):
-    pred_flat = np.argmax(preds, axis=2).flatten()
-    labels_flat = labels.flatten()
-
-    # print("-")
-    # print(list(pred_flat))
-    # print(list(labels_flat))
-    # print("-")
-
-    score = np.sum(pred_flat == labels_flat) / len(labels_flat)
-    return score
-
-
 def intent_accuracy(preds, labels):
-    pred_flat = np.argmax(preds, axis=2)[:,0].flatten()
+    # pred_flat = np.argmax(preds, axis=2)[:,0].flatten()
+    pred_flat = np.argmax(preds, axis=1)
     labels_flat = labels[:,0].flatten()
-    score = np.sum(pred_flat == labels_flat) / len(labels_flat)
-    return score
+
+    return np.sum(pred_flat == labels_flat) / len(labels_flat)
 
 
 def format_time(elapsed):
@@ -192,7 +179,7 @@ total_eval_accuracy = 0
 total_eval_intent_accuracy = 0
 total_eval_loss = 0
 nb_eval_steps = 0
-val_preds, val_true = [], []
+# val_preds, val_true = [], []
 
 # Evaluate data for one epoch
 for batch in validation_dataloader:
@@ -232,20 +219,13 @@ for batch in validation_dataloader:
     logits = logits.detach().cpu().numpy()
     label_ids = b_labels.to('cpu').numpy()
 
-    # Calculate the accuracy for this batch of test sentences, and
-    # accumulate it over all batches.
-    total_eval_accuracy += flat_accuracy(logits, label_ids)
     total_eval_intent_accuracy += intent_accuracy(logits, label_ids)
-
-    val_preds.extend([list(p) for p in np.argmax(logits, axis=2)])
-    val_true.extend(label_ids)
 
 
 total_test_accuracy = 0
 total_test_intent_accuracy = 0
 total_test_loss = 0
 nb_test_steps = 0
-test_preds, test_true = [], []
 
 # Evaluate data for one epoch
 for batch in test_dataloader:
@@ -285,37 +265,17 @@ for batch in test_dataloader:
     logits = logits.detach().cpu().numpy()
     label_ids = b_labels.to('cpu').numpy()
 
-    # Calculate the accuracy for this batch of test sentences, and
-    # accumulate it over all batches.
-    total_test_accuracy += flat_accuracy(logits, label_ids)
     total_test_intent_accuracy += intent_accuracy(logits, label_ids)
 
-    test_preds.extend([list(p) for p in np.argmax(logits, axis=2)])
-    test_true.extend(label_ids)
 
-
-val_pred_tags = [tag_values[p_i] for p, l in zip(val_preds, val_true)
-                                 for p_i, l_i in zip(p, l) if tag_values[l_i] != "PAD"]
-val_valid_tags = [tag_values[l_i] for l in val_true
-                                  for l_i in l if tag_values[l_i] != "PAD"]
-test_pred_tags = [tag_values[p_i] for p, l in zip(test_preds, test_true)
-                                 for p_i, l_i in zip(p, l) if tag_values[l_i] != "PAD"]
-test_valid_tags = [tag_values[l_i] for l in test_true
-                                  for l_i in l if tag_values[l_i] != "PAD"]
-
-
-val_f1 = f1_score(val_pred_tags, val_valid_tags)
-test_f1 = f1_score(test_pred_tags, test_valid_tags)
 
 
 # Report the final accuracy for this validation run.
 avg_val_accuracy = total_eval_accuracy / len(validation_dataloader)
 avg_test_accuracy = total_test_accuracy / len(test_dataloader)
-# print("  Accuracy: {0:.2f}".format(avg_val_accuracy))
 
 avg_val_intent_accuracy = total_eval_intent_accuracy / len(validation_dataloader)
 avg_test_intent_accuracy = total_test_intent_accuracy / len(test_dataloader)
-# print("  Intent lAccuracy: {0:.2f}".format(avg_val_intent_accuracy))
 
 # Calculate the average loss over all of the batches.
 avg_val_loss = total_eval_loss / len(validation_dataloader)
@@ -327,4 +287,4 @@ validation_time = format_time(time.time() - t0)
 # print("  Validation Loss: {0:.2f}".format(avg_val_loss))
 # print("  Validation took: {:}".format(validation_time))
 
-print("{}\t{}\t{}\t{}\t{}".format(params.output_dir, avg_val_intent_accuracy, val_f1, avg_test_intent_accuracy, test_f1))
+print("{}\t{}\t{}\t{}\t{}".format(params.output_dir, "Val. Intent Acc.", avg_val_intent_accuracy, "Test Intent Acc.", avg_test_intent_accuracy))
